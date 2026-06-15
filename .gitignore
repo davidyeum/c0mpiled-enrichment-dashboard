@@ -1,0 +1,6 @@
+.env
+enriched_contacts.csv
+contacts.csv
+guest_id.csv
+__pycache__/
+*.pyc

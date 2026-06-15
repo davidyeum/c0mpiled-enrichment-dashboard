@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Enrichment Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --border-light: #f0f1f3;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --accent: #4f46e5;
+    --accent-light: #ede9fe;
+    --tag-a-bg: #14532d; --tag-a-text: #ffffff;
+    --tag-b-bg: #1d4ed8; --tag-b-text: #ffffff;
+    --tag-c-bg: #c2410c; --tag-c-text: #ffffff;
+    --tag-d-bg: #6b7280; --tag-d-text: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,.15), 0 4px 16px rgba(0,0,0,.08);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── UPLOAD SCREEN ── */
+  #upload-screen {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh; padding: 24px; gap: 0;
+  }
+  .upload-logo {
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: 32px;
+  }
+  .upload-card {
+    background: var(--surface); border: 2px dashed var(--border);
+    border-radius: 16px; padding: 56px 64px; text-align: center;
+    max-width: 480px; width: 100%; box-shadow: var(--shadow-md);
+    transition: border-color .2s, background .2s; cursor: pointer;
+  }
+  .upload-card.drag-over { border-color: var(--accent); background: var(--accent-light); }
+  .upload-icon {
+    width: 56px; height: 56px; border-radius: 14px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+  }
+  .upload-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .upload-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+  .upload-btn {
+    display: inline-flex; align-items: center; gap: 8px; background: var(--accent);
+    color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px 20px;
+    font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+    transition: background .15s, transform .1s;
+  }
+  .upload-btn:hover { background: #4338ca; transform: translateY(-1px); }
+  #file-input { display: none; }
+  .upload-hint { margin-top: 16px; font-size: 11px; color: var(--text-muted); }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; flex-direction: column; min-height: 100vh; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 50;
+    box-shadow: var(--shadow-sm);
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-icon {
+    width: 30px; height: 30px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .header-subtitle { font-size: 12px; color: var(--text-muted); }
+  .btn-reload {
+    display: inline-flex; align-items: center; gap: 6px; background: transparent;
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px;
+    font-size: 12px; font-weight: 500; color: var(--text-secondary); cursor: pointer;
+    font-family: inherit; transition: border-color .15s, color .15s;
+  }
+  .btn-reload:hover { border-color: var(--accent); color: var(--accent); }
+
+  .main { padding: 20px 24px; flex: 1; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; box-shadow: var(--shadow-sm); display: flex;
+    align-items: flex-start; gap: 12px; transition: box-shadow .15s;
+  }
+  .stat-card:hover { box-shadow: var(--shadow-md); }
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 9px; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .stat-icon.total { background: #ede9fe; }
+  .stat-icon.tag-a  { background: #dcfce7; }
+  .stat-icon.tag-b  { background: #dbeafe; }
+  .stat-icon.tag-c  { background: #ffedd5; }
+  .stat-icon.tag-d  { background: #f3f4f6; }
+
+  /* SVG icons inside stat cards */
+  .stat-icon svg { width: 16px; height: 16px; }
+  .stat-icon.total svg { color: #7c3aed; }
+  .stat-icon.tag-a  svg { color: #15803d; }
+  .stat-icon.tag-b  svg { color: #1d4ed8; }
+  .stat-icon.tag-c  svg { color: #c2410c; }
+  .stat-icon.tag-d  svg { color: #6b7280; }
+
+  .stat-body { min-width: 0; }
+  .stat-value { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+  .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+  .stat-sub { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ── FILTERS ── */
+  .filters-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 220px; }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); pointer-events: none;
+  }
+  .search-icon svg { width: 13px; height: 13px; }
+  .search-input {
+    width: 100%; padding: 8px 10px 8px 32px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+    color: var(--text-primary); background: var(--bg); outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .filter-label {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .06em; white-space: nowrap;
+  }
+  .tag-btn {
+    padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px;
+    font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;
+    background: transparent; color: var(--text-secondary); transition: all .15s;
+  }
+  .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tag-btn.active-a { background: var(--tag-a-bg); border-color: var(--tag-a-bg); color: #fff; }
+  .tag-btn.active-b { background: var(--tag-b-bg); border-color: var(--tag-b-bg); color: #fff; }
+  .tag-btn.active-c { background: var(--tag-c-bg); border-color: var(--tag-c-bg); color: #fff; }
+  .tag-btn.active-d { background: var(--tag-d-bg); border-color: var(--tag-d-bg); color: #fff; }
+  .tag-btn.active-yc { background: #f97316; border-color: #f97316; color: #fff; }
+  .tag-btn.active-ef { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+
+  .filter-select {
+    padding: 7px 28px 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; font-family: inherit; color: var(--text-primary); background: var(--bg);
+    outline: none; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+    transition: border-color .15s; max-width: 200px; min-width: 130px;
+  }
+  .filter-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.1); }
+
+  /* ── TABLE ── */
+  .table-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; padding: 0 2px;
+  }
+  .row-count { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .btn-export {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); padding: 6px 14px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: background .15s;
+  }
+  .btn-export:hover { background: #4338ca; }
+  .btn-export:disabled { background: #c4b5fd; cursor: default; }
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .table-scroll {
+    overflow-x: auto; overflow-y: auto;
+    max-height: calc(100vh - 320px); min-height: 300px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { position: sticky; top: 0; z-index: 10; }
+  thead th {
+    background: #f8f9fb; border-bottom: 1px solid var(--border);
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em;
+    white-space: nowrap; user-select: none;
+  }
+  thead th.sortable { cursor: pointer; transition: color .15s; }
+  thead th.sortable:hover { color: var(--accent); }
+  thead th .sort-indicator { display: inline-block; margin-left: 4px; font-size: 10px; opacity: .5; }
+  thead th.sort-asc .sort-indicator::after { content: '▲'; opacity: 1; }
+  thead th.sort-desc .sort-indicator::after { content: '▼'; opacity: 1; }
+  thead th:not(.sort-asc):not(.sort-desc) .sort-indicator::after { content: '⇅'; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background .1s; cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tbody tr:hover { background: #f0f4ff; }
+
+  tbody td { padding: 11px 14px; vertical-align: top; }
+
+  .col-name   { min-width: 130px; max-width: 170px; }
+  .col-role   { min-width: 160px; max-width: 220px; }
+  .col-edu    { min-width: 150px; max-width: 200px; }
+  .col-loc    { min-width: 100px; max-width: 140px; }
+  .col-source { min-width: 100px; max-width: 140px; }
+  .col-tag    { min-width: 60px; width: 60px; text-align: center; }
+  .col-reason { min-width: 200px; }
+  .col-links  { min-width: 70px; width: 70px; text-align: center; }
+
+  .cell-name { font-weight: 600; color: var(--text-primary); }
+  .cell-secondary { color: var(--text-secondary); font-size: 12px; }
+  .cell-muted { color: var(--text-muted); font-size: 12px; }
+
+  .not-enriched-badge {
+    display: inline-flex; align-items: center; gap: 4px; background: #fef9c3;
+    color: #92400e; border: 1px solid #fde68a; border-radius: 4px;
+    padding: 2px 7px; font-size: 11px; font-weight: 500;
+  }
+
+  .tag-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    font-size: 11px; font-weight: 700;
+  }
+  .tag-pill.tag-a { background: var(--tag-a-bg); color: var(--tag-a-text); }
+  .tag-pill.tag-b { background: var(--tag-b-bg); color: var(--tag-b-text); }
+  .tag-pill.tag-c { background: var(--tag-c-bg); color: var(--tag-c-text); }
+  .tag-pill.tag-d { background: var(--tag-d-bg); color: var(--tag-d-text); }
+  .tag-pill.tag-  { background: #e5e7eb; color: var(--text-muted); }
+
+  .reason-cell { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  .link-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border);
+    color: var(--text-secondary); text-decoration: none; transition: all .15s; font-size: 13px;
+    background: transparent; cursor: pointer; font-family: inherit;
+  }
+  .link-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .link-btn.linkedin:hover { border-color: #0a66c2; color: #0a66c2; background: #e8f4fd; }
+  .links-cell { display: flex; gap: 5px; justify-content: center; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state p { font-size: 14px; color: var(--text-secondary); }
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+  .table-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+  .table-scroll::-webkit-scrollbar-track { background: transparent; }
+  .table-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  .table-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+  /* ── PROFILE MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 100; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface); border-radius: 16px; width: 100%;
+    max-width: 600px; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg); position: relative;
+  }
+
+  .modal-header {
+    padding: 24px 24px 0; display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 16px;
+  }
+  .modal-name { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+  .modal-close {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; cursor: pointer; font-size: 18px; color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: all .15s; font-family: inherit;
+  }
+  .modal-close:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+
+  .modal-tag-row { padding: 8px 24px 0; display: flex; align-items: center; gap: 8px; }
+
+  .modal-tag-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  }
+  .modal-tag-pill.tag-a { background: var(--tag-a-bg); color: #fff; }
+  .modal-tag-pill.tag-b { background: var(--tag-b-bg); color: #fff; }
+  .modal-tag-pill.tag-c { background: var(--tag-c-bg); color: #fff; }
+  .modal-tag-pill.tag-d { background: var(--tag-d-bg); color: #fff; }
+  .modal-tag-pill.tag-  { background: #e5e7eb; color: var(--text-muted); }
+
+  .modal-source-label {
+    font-size: 12px; color: var(--text-muted); font-weight: 500;
+  }
+
+  .modal-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+  .modal-section {}
+  .modal-section-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--text-muted); margin-bottom: 4px;
+  }
+  .modal-section-value {
+    font-size: 13px; color: var(--text-primary); line-height: 1.6;
+  }
+  .modal-section-value.muted { color: var(--text-secondary); }
+
+  .modal-divider { height: 1px; background: var(--border-light); }
+
+  .modal-links-row {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .modal-link-btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 500; color: var(--text-secondary);
+    text-decoration: none; cursor: pointer; font-family: inherit;
+    background: transparent; transition: all .15s;
+  }
+  .modal-link-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .modal-link-btn.linkedin:hover { border-color: #0a66c2; color: #0a66c2; background: #e8f4fd; }
+  .modal-link-btn svg { width: 14px; height: 14px; }
+
+  /* email reveal */
+  .email-reveal {
+    display: inline-block; padding: 4px 10px; background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px;
+    color: #15803d; font-weight: 500; margin-top: 4px;
+    user-select: all; cursor: text;
+  }
+
+  @media (max-width: 900px) {
+    .main { padding: 14px; }
+    .stats-bar { grid-template-columns: repeat(3, 1fr); }
+    .col-edu, .col-loc { display: none; }
+  }
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .col-source { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- UPLOAD -->
+<div id="upload-screen">
+  <div class="upload-logo">Contact Enrichment Dashboard</div>
+  <div class="upload-card" id="drop-zone">
+    <div class="upload-icon">
+      <svg width="26" height="26" fill="none" stroke="#4f46e5" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+    </div>
+    <h2>Load your CSV file</h2>
+    <p>Drag &amp; drop your <strong>enriched_contacts.csv</strong> here, or click below to select it.</p>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Choose File
+    </button>
+    <input type="file" id="file-input" accept=".csv,text/csv">
+    <div class="upload-hint">All processing happens in your browser</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <header class="header">
+    <div class="header-left">
+      <div class="header-icon">CE</div>
+      <div>
+        <div class="header-title">Contact Enrichment</div>
+        <div class="header-subtitle" id="header-filename">enriched_contacts.csv</div>
+      </div>
+    </div>
+    <button class="btn-reload" onclick="resetToUpload()">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      Load new file
+    </button>
+  </header>
+
+  <main class="main">
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <div class="filters-panel">
+      <div class="search-wrap">
+        <span class="search-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input type="text" class="search-input" id="search-input" placeholder="Search by name, role, or reason…">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Tag</span>
+        <button class="tag-btn active" data-tag="all" onclick="setTagFilter('all')">All</button>
+        <button class="tag-btn" data-tag="A" onclick="setTagFilter('A')">A</button>
+        <button class="tag-btn" data-tag="B" onclick="setTagFilter('B')">B</button>
+        <button class="tag-btn" data-tag="C" onclick="setTagFilter('C')">C</button>
+        <button class="tag-btn" data-tag="D" onclick="setTagFilter('D')">D</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Accelerator</span>
+        <button class="tag-btn" id="yc-btn" onclick="toggleYC()">YC</button>
+        <button class="tag-btn" id="ef-btn" onclick="toggleEF()">EF</button>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Source</span>
+        <select class="filter-select" id="source-filter" onchange="applyFilters()">
+          <option value="">All sources</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Location</span>
+        <select class="filter-select" id="location-filter" onchange="applyFilters()">
+          <option value="">All locations</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-meta">
+      <span class="row-count" id="row-count">Showing 0 of 0 contacts</span>
+      <button class="btn-export" id="export-btn" onclick="exportCSV()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table id="contacts-table">
+          <thead>
+            <tr>
+              <th class="col-name sortable" data-col="full_name" onclick="toggleSort('full_name')">Name <span class="sort-indicator"></span></th>
+              <th class="col-role">Role</th>
+              <th class="col-edu">Education</th>
+              <th class="col-loc">Location</th>
+              <th class="col-source">Source</th>
+              <th class="col-tag sortable" data-col="tag" onclick="toggleSort('tag')">Tag <span class="sort-indicator"></span></th>
+              <th class="col-reason">Reason</th>
+              <th class="col-links">Links</th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display:none">
+          <p>No contacts match your filters.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-name" id="modal-name"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-tag-row">
+      <span class="modal-tag-pill" id="modal-tag-pill"></span>
+      <span class="modal-source-label" id="modal-source"></span>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── CSV PARSER ──
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rows = []; let i = 0, n = text.length;
+  while (i < n) {
+    const row = [];
+    while (i < n) {
+      if (text[i] === '"') {
+        let field = ''; i++;
+        while (i < n) {
+          if (text[i] === '"') {
+            if (i+1 < n && text[i+1] === '"') { field += '"'; i += 2; }
+            else { i++; break; }
+          } else { field += text[i++]; }
+        }
+        row.push(field);
+      } else {
+        let field = '';
+        while (i < n && text[i] !== ',' && text[i] !== '\n') field += text[i++];
+        row.push(field.trim());
+      }
+      if (i < n && text[i] === ',') i++;
+      else break;
+    }
+    if (i < n && text[i] === '\n') i++;
+    if (row.length > 0 && !(row.length === 1 && row[0] === '')) rows.push(row);
+  }
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  return rows.slice(1).map(cols => {
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h] = (cols[idx] || '').trim(); });
+    return obj;
+  });
+}
+
+// ── STATE ──
+let allContacts = [], filteredContacts = [];
+let currentTagFilter = new Set(['all']), currentSort = { col: null, dir: 'asc' };
+let ycFilterOn = false, efFilterOn = false;
+
+const YC_PATTERNS = [
+  /\bYC\b/i, /y[\s-]?combinator/i, /ycombinator/i,
+  /\bYC\s*W\d{2}\b/i, /\bYC\s*S\d{2}\b/i,
+  /\bYC\s*F\d{2}\b/i, /y\s*c\s*backed/i,
+  /yc\s*batch/i, /yc\s*alum/i, /yc\s*portfolio/i,
+  /yc\s*startup/i, /yc\s*company/i, /yc\s*founder/i,
+];
+
+function isYC(c) {
+  const haystack = [c.current_position, c.past_positions, c.reason, c.education].join(' ');
+  return YC_PATTERNS.some(p => p.test(haystack));
+}
+
+const EF_PATTERNS = [
+  /entrepreneurs?[\s-]?first/i, /\bEF\b.*cohort/i, /cohort.*\bEF\b/i,
+  /ef[\s-]?fellow/i, /ef[\s-]?portfolio/i, /ef[\s-]?founder/i,
+  /ef[\s-]?backed/i, /ef[\s-]?alumni/i, /ef[\s-]?alum\b/i,
+  /\bEF\s+[A-Z]\d+\b/i,
+];
+
+function isEF(c) {
+  const haystack = Object.values(c).join(' ');
+  return EF_PATTERNS.some(p => p.test(haystack));
+}
+
+function toggleYC() {
+  ycFilterOn = !ycFilterOn;
+  document.getElementById('yc-btn').className = ycFilterOn ? 'tag-btn active-yc' : 'tag-btn';
+  applyFilters();
+}
+
+function toggleEF() {
+  efFilterOn = !efFilterOn;
+  document.getElementById('ef-btn').className = efFilterOn ? 'tag-btn active-ef' : 'tag-btn';
+  applyFilters();
+}
+const REASON_MAX = 120;
+
+// ── UPLOAD ──
+function setupUpload() {
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    allContacts = parseCSV(e.target.result);
+    document.getElementById('header-filename').textContent = file.name;
+    initDashboard();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function resetToUpload() {
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  allContacts = []; filteredContacts = [];
+  currentTagFilter = new Set(['all']); currentSort = { col: null, dir: 'asc' }; ycFilterOn = false; efFilterOn = false;
+}
+
+// ── INIT ──
+function initDashboard() {
+  document.getElementById('upload-screen').style.display = 'none';
+  const dash = document.getElementById('dashboard');
+  dash.style.display = 'flex'; dash.style.flexDirection = 'column';
+  populateFilters(); renderStats(); applyFilters();
+}
+
+function populateFilters() {
+  const sources = [...new Set(allContacts.map(c => c.source_sheet).filter(Boolean))].sort();
+  const STATE_NAMES = {
+    AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',
+    CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',
+    IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',
+    ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',
+    MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+    NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',
+    OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',
+    TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',
+    WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',DC:'District of Columbia'
+  };
+
+  const allLocs = [...new Set(allContacts.map(c => c.location).filter(Boolean))];
+  const usStates = allLocs.filter(l => /^[A-Z]{2}$/.test(l.trim()) || l.trim() === 'USA').sort();
+  const others = allLocs.filter(l => !/^[A-Z]{2}$/.test(l.trim()) && l.trim() !== 'USA').sort();
+
+  document.getElementById('source-filter').innerHTML = '<option value="">All sources</option>' +
+    sources.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  document.getElementById('location-filter').innerHTML =
+    '<option value="">All locations</option>' +
+    (usStates.length ? `<optgroup label="US States">${usStates.map(l => `<option value="${esc(l)}">${esc(STATE_NAMES[l] || l)}</option>`).join('')}</optgroup>` : '') +
+    (others.length  ? `<optgroup label="Countries &amp; Regions">${others.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('')}</optgroup>` : '');
+}
+
+// ── STATS ──
+function renderStats() {
+  const total = allContacts.length;
+  const tags = { A:0, B:0, C:0, D:0 };
+  allContacts.forEach(c => { const t = (c.tag||'').toUpperCase(); if (tags.hasOwnProperty(t)) tags[t]++; });
+  const pct = n => total > 0 ? Math.round(n/total*100) : 0;
+
+  const iconTotal = `<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`;
+  const iconA = `<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  const iconB = `<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+  const iconC = `<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>`;
+  const iconD = `<svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+
+  const defs = [
+    { cls:'total', icon: iconTotal, value: total.toLocaleString(), label:'Total Contacts', sub:'' },
+    { cls:'tag-a', icon: iconA, value: tags.A.toLocaleString(), label:'Tag A — Executives, founders, 10+ yrs', sub:`${pct(tags.A)}% of total` },
+    { cls:'tag-b', icon: iconB, value: tags.B.toLocaleString(), label:'Tag B — Managers, engineers, grad students', sub:`${pct(tags.B)}% of total` },
+    { cls:'tag-c', icon: iconC, value: tags.C.toLocaleString(), label:'Tag C — Undergrads with strong experience', sub:`${pct(tags.C)}% of total` },
+    { cls:'tag-d', icon: iconD, value: tags.D.toLocaleString(), label:'Tag D — Students, limited experience', sub:`${pct(tags.D)}% of total` },
+  ];
+
+  document.getElementById('stats-bar').innerHTML = defs.map(d => `
+    <div class="stat-card">
+      <div class="stat-icon ${d.cls}">${d.icon}</div>
+      <div class="stat-body">
+        <div class="stat-value">${d.value}</div>
+        <div class="stat-label">${d.label}</div>
+        ${d.sub ? `<div class="stat-sub">${d.sub}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ── FILTERS ──
+let searchDebounce = null;
+document.addEventListener('DOMContentLoaded', () => {
+  setupUpload();
+  document.getElementById('search-input').addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(applyFilters, 120);
+  });
+});
+
+function setTagFilter(tag) {
+  if (tag === 'all') {
+    currentTagFilter = new Set(['all']);
+  } else {
+    currentTagFilter.delete('all');
+    if (currentTagFilter.has(tag)) {
+      currentTagFilter.delete(tag);
+      if (currentTagFilter.size === 0) currentTagFilter = new Set(['all']);
+    } else {
+      currentTagFilter.add(tag);
+    }
+  }
+  document.querySelectorAll('.tag-btn').forEach(btn => {
+    const t = btn.dataset.tag;
+    btn.className = 'tag-btn';
+    const active = currentTagFilter.has(t);
+    if (active) {
+      if (t === 'all') btn.classList.add('active');
+      else btn.classList.add(`active-${t.toLowerCase()}`);
+    }
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  const query = document.getElementById('search-input').value.trim().toLowerCase();
+  const sourceVal = document.getElementById('source-filter').value;
+  const locVal = document.getElementById('location-filter').value;
+  filteredContacts = allContacts.filter(c => {
+    if (!currentTagFilter.has('all') && !currentTagFilter.has((c.tag||'').toUpperCase())) return false;
+    if (sourceVal && c.source_sheet !== sourceVal) return false;
+    if (locVal && c.location !== locVal) return false;
+    if (ycFilterOn && !isYC(c)) return false;
+    if (efFilterOn && !isEF(c)) return false;
+    if (query) {
+      const hay = [c.full_name, c.current_position, c.reason].join(' ').toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    return true;
+  });
+  applySortToFiltered(); renderTable();
+}
+
+// ── SORT ──
+function toggleSort(col) {
+  if (currentSort.col === col) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+  else { currentSort.col = col; currentSort.dir = 'asc'; }
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if (th.dataset.col === col) th.classList.add(currentSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  });
+  applySortToFiltered(); renderTable();
+}
+
+function applySortToFiltered() {
+  if (!currentSort.col) return;
+  const { col, dir } = currentSort;
+  const tagOrder = { A:0, B:1, C:2, D:3, '':4 };
+  filteredContacts.sort((a,b) => {
+    let va, vb;
+    if (col === 'tag') { va = tagOrder[a.tag?.toUpperCase()]??4; vb = tagOrder[b.tag?.toUpperCase()]??4; }
+    else { va = (a[col]||'').toLowerCase(); vb = (b[col]||'').toLowerCase(); }
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+// ── RENDER TABLE ──
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderTable() {
+  const tbody = document.getElementById('contacts-tbody');
+  const emptyState = document.getElementById('empty-state');
+  const total = allContacts.length, shown = filteredContacts.length;
+  document.getElementById('row-count').textContent =
+    `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} contact${total!==1?'s':''}`;
+
+  if (shown === 0) { tbody.innerHTML = ''; emptyState.style.display = 'block'; return; }
+  emptyState.style.display = 'none';
+
+  const fragment = document.createDocumentFragment();
+  filteredContacts.forEach((c, idx) => {
+    const tr = document.createElement('tr');
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('.link-btn')) return;
+      openModal(c);
+    });
+
+    const isNotEnriched = !c.current_position && !c.reason;
+    const tag = (c.tag||'').toUpperCase();
+    const tagClass = tag ? `tag-${tag.toLowerCase()}` : 'tag-';
+
+    const reason = c.reason||'';
+    let reasonHTML;
+    if (reason.length <= REASON_MAX) {
+      reasonHTML = esc(reason) || '<span style="color:var(--text-muted);font-size:11px">—</span>';
+    } else {
+      reasonHTML = `<span style="font-size:12px;color:var(--text-secondary)">${esc(reason.slice(0,REASON_MAX))}<span style="color:var(--accent);font-weight:500;font-size:11px">… click row</span></span>`;
+    }
+
+    const edu = c.education||'';
+    const eduDisplay = edu.length > 60 ? edu.slice(0,57)+'…' : edu;
+
+    let roleHTML;
+    if (isNotEnriched) roleHTML = `<span class="not-enriched-badge">⚠ Not enriched</span>`;
+    else roleHTML = `<span class="truncate" style="max-width:200px" title="${esc(c.current_position)}">${esc(c.current_position)||'<span style="color:var(--text-muted)">—</span>'}</span>`;
+
+    const liHTML = c.linkedin_url
+      ? `<a href="${esc(c.linkedin_url)}" target="_blank" rel="noopener" class="link-btn linkedin" title="LinkedIn" onclick="event.stopPropagation()">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+         </a>`
+      : `<span class="link-btn" style="opacity:.3;cursor:default"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></span>`;
+
+    tr.innerHTML = `
+      <td class="col-name"><span class="cell-name truncate" style="max-width:150px" title="${esc(c.full_name)}">${esc(c.full_name)||'—'}</span></td>
+      <td class="col-role">${roleHTML}</td>
+      <td class="col-edu"><span class="cell-muted truncate" style="max-width:190px" title="${esc(edu)}">${esc(eduDisplay)||'<span style="color:var(--text-muted)">—</span>'}</span></td>
+      <td class="col-loc"><span class="cell-secondary truncate" style="max-width:130px">${esc(c.location)||'<span style="color:var(--text-muted)">—</span>'}</span></td>
+      <td class="col-source"><span class="cell-muted truncate" style="max-width:130px">${esc(c.source_sheet)||'—'}</span></td>
+      <td class="col-tag"><span class="tag-pill ${tagClass}">${esc(tag)||'?'}</span></td>
+      <td class="col-reason"><div class="reason-cell">${reasonHTML}</div></td>
+      <td class="col-links"><div class="links-cell">${liHTML}</div></td>
+    `;
+    fragment.appendChild(tr);
+  });
+  tbody.innerHTML = ''; tbody.appendChild(fragment);
+}
+
+// ── MODAL ──
+function openModal(c) {
+  const tag = (c.tag||'').toUpperCase();
+  const tagClass = tag ? `tag-${tag.toLowerCase()}` : 'tag-';
+
+  document.getElementById('modal-name').textContent = c.full_name || '—';
+
+  const pill = document.getElementById('modal-tag-pill');
+  pill.textContent = tag || '?';
+  pill.className = `modal-tag-pill ${tagClass}`;
+
+  document.getElementById('modal-source').textContent = c.source_sheet || '';
+
+  const sections = [];
+
+  if (c.current_position) {
+    sections.push(`<div class="modal-section">
+      <div class="modal-section-label">Current Role</div>
+      <div class="modal-section-value">${esc(c.current_position)}</div>
+    </div>`);
+  }
+
+  if (c.past_positions) {
+    sections.push(`<div class="modal-section">
+      <div class="modal-section-label">Past Positions</div>
+      <div class="modal-section-value muted">${esc(c.past_positions).replace(/;\s*/g, '<br>')}</div>
+    </div>`);
+  }
+
+  if (c.education) {
+    sections.push(`<div class="modal-section">
+      <div class="modal-section-label">Education</div>
+      <div class="modal-section-value muted">${esc(c.education).replace(/;\s*/g, '<br>')}</div>
+    </div>`);
+  }
+
+  if (c.location) {
+    sections.push(`<div class="modal-section">
+      <div class="modal-section-label">Location</div>
+      <div class="modal-section-value muted">${esc(c.location)}</div>
+    </div>`);
+  }
+
+  if (c.reason) {
+    sections.push(`<div class="modal-divider"></div>
+    <div class="modal-section">
+      <div class="modal-section-label">Why Notable</div>
+      <div class="modal-section-value muted">${esc(c.reason)}</div>
+    </div>`);
+  }
+
+  // Email section
+  sections.push(`<div class="modal-divider"></div>
+  <div class="modal-section">
+    <div class="modal-section-label">Email</div>
+    ${c.email
+      ? `<div class="email-reveal">${esc(c.email)}</div>`
+      : `<div class="modal-section-value muted" style="color:var(--text-muted)">—</div>`
+    }
+  </div>`);
+
+  // Links
+  const linksHTML = [];
+  if (c.linkedin_url) {
+    linksHTML.push(`<a href="${esc(c.linkedin_url)}" target="_blank" rel="noopener" class="modal-link-btn linkedin">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+      LinkedIn Profile
+    </a>`);
+  }
+
+  if (linksHTML.length) {
+    sections.push(`<div class="modal-links-row">${linksHTML.join('')}</div>`);
+  }
+
+  document.getElementById('modal-body').innerHTML = sections.join('');
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── EXPORT ──
+function exportCSV() {
+  if (!filteredContacts.length) return;
+  const cols = ['full_name','email','linkedin_url','source_sheet','location',
+                'current_position','past_positions','education','reason','tag'];
+
+  const escape = val => {
+    const s = String(val ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const lines = [cols.join(',')];
+  filteredContacts.forEach(c => {
+    lines.push(cols.map(col => escape(c[col] || '')).join(','));
+  });
+
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `export_${filteredContacts.length}_contacts.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
